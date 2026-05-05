@@ -1,0 +1,116 @@
+<div class="setup-shell">
+  <div class="setup-card">
+    <div class="setup-header">
+      <h2>Setup Offline TOTP</h2>
+      <p>Add a new authentication account</p>
+    </div>
+
+    <!-- Error Message -->
+    <div *ngIf="error" class="error-banner">
+      {{ error }}
+    </div>
+
+    <!-- Method Selection -->
+    <div *ngIf="step === 'method'" class="setup-step">
+      <div class="method-options">
+        <button class="method-button" (click)="startManualEntry()" [disabled]="loading">
+          <span class="method-icon">✎</span>
+          <span class="method-label">Manual Entry</span>
+          <span class="method-desc">Enter secret manually</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Manual Entry -->
+    <div *ngIf="step === 'manual'" class="setup-step">
+      <form (ngSubmit)="proceedWithManual()" class="setup-form">
+        <label>
+          <span>Base32 Secret</span>
+          <input
+            type="text"
+            [(ngModel)]="manualSecret"
+            name="secret"
+            placeholder="e.g., JBSWY3DPEBLW64TMMQ======"
+            required
+          />
+        </label>
+
+        <label>
+          <span>Account Name</span>
+          <input
+            type="text"
+            [(ngModel)]="manualAccount"
+            name="account"
+            placeholder="e.g., user@example.com"
+            required
+          />
+        </label>
+
+        <label>
+          <span>Issuer (App Name)</span>
+          <input
+            type="text"
+            [(ngModel)]="manualIssuer"
+            name="issuer"
+            placeholder="e.g., OfflineAuth"
+            required
+          />
+        </label>
+
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" (click)="cancel()" [disabled]="loading">
+            Cancel
+          </button>
+          <button type="submit" class="btn-primary" [disabled]="loading">
+            {{ loading ? 'Processing...' : 'Next' }}
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Confirmation -->
+    <div *ngIf="step === 'confirmation'" class="setup-step">
+      <div class="confirmation-section">
+        <h3>Verify Your Account</h3>
+
+        <div class="account-details">
+          <div class="detail-row">
+            <span class="label">Account:</span>
+            <span class="value">{{ totpData.account }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="label">Issuer:</span>
+            <span class="value">{{ totpData.issuer }}</span>
+          </div>
+        </div>
+
+        <div class="code-preview">
+          <h4>Preview TOTP Code</h4>
+          <div class="code-display">{{ previewCode }}</div>
+          <p class="code-hint">This code changes every 30 seconds</p>
+        </div>
+
+        <div class="backup-codes-section">
+          <h4>Backup Codes (Keep Safe!)</h4>
+          <p class="backup-hint">
+            Save these codes in a secure location. You can use them to recover your account if you
+            lose access.
+          </p>
+          <div class="codes-list">
+            <div *ngFor="let code of backupCodes" class="code-item">{{ code }}</div>
+          </div>
+          <button type="button" class="btn-copy" (click)="copyBackupCodes()">📋 Copy Codes</button>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" (click)="cancel()" [disabled]="loading">
+            Back
+          </button>
+          <button type="button" class="btn-primary" (click)="saveTOTPSecret()" [disabled]="loading">
+            {{ loading ? 'Saving...' : 'Save & Complete' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

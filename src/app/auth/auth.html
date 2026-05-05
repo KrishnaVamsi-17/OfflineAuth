@@ -1,0 +1,40 @@
+<div class="auth-shell">
+  <section class="auth-card">
+    <div class="brand">
+      <h1>OfflineAuth</h1>
+      <p>Login with username/password or Microsoft.</p>
+    </div>
+
+    <form (ngSubmit)="login()" class="auth-form">
+      <label>
+        <span>Username</span>
+        <input
+          type="text"
+          [(ngModel)]="username"
+          name="username"
+          placeholder="Enter username"
+          required
+        />
+      </label>
+
+      <label>
+        <span>Password</span>
+        <input
+          type="password"
+          [(ngModel)]="password"
+          name="password"
+          placeholder="Enter password"
+          required
+        />
+      </label>
+
+      <button type="submit" class="primary-button">Login</button>
+    </form>
+
+    <div class="divider"><span>or</span></div>
+
+    <button type="button" class="secondary-button" (click)="loginWithMicrosoft()">
+      Login with Microsoft
+    </button>
+  </section>
+</div>

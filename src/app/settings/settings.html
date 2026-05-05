@@ -1,0 +1,268 @@
+<div class="settings-shell">
+  <div class="settings-container">
+    <div class="settings-header">
+      <h1>Settings</h1>
+      <p>Manage your account and security preferences</p>
+    </div>
+
+    <div class="settings-content">
+      <!-- Tabs -->
+      <div class="tabs">
+        <button
+          class="tab-button"
+          [class.active]="activeTab === 'user-details'"
+          (click)="setActiveTab('user-details')"
+        >
+          <span class="tab-icon">👤</span>
+          <span>User Details</span>
+        </button>
+        <button
+          class="tab-button"
+          [class.active]="activeTab === 'auth-config'"
+          (click)="setActiveTab('auth-config')"
+        >
+          <span class="tab-icon">🔐</span>
+          <span>Auth Configuration</span>
+        </button>
+        <button
+          class="tab-button"
+          [class.active]="activeTab === 'pin-setup'"
+          (click)="setActiveTab('pin-setup')"
+        >
+          <span class="tab-icon">🔑</span>
+          <span>PIN Setup</span>
+        </button>
+        <button
+          class="tab-button"
+          [class.active]="activeTab === 'totp-accounts'"
+          (click)="setActiveTab('totp-accounts')"
+        >
+          <span class="tab-icon">📱</span>
+          <span>TOTP Accounts</span>
+        </button>
+      </div>
+
+      <!-- Tab Content -->
+      <div class="tab-content">
+        <!-- User Details Tab -->
+        <div *ngIf="activeTab === 'user-details'" class="tab-pane active">
+          <form (ngSubmit)="saveUserDetails()" class="settings-form">
+            <div class="form-group">
+              <label>
+                <span>First Name</span>
+                <input
+                  type="text"
+                  [(ngModel)]="userDetails.firstName"
+                  name="firstName"
+                  placeholder="Enter first name"
+                />
+              </label>
+            </div>
+
+            <div class="form-group">
+              <label>
+                <span>Last Name</span>
+                <input
+                  type="text"
+                  [(ngModel)]="userDetails.lastName"
+                  name="lastName"
+                  placeholder="Enter last name"
+                />
+              </label>
+            </div>
+
+            <div class="form-group">
+              <label>
+                <span>Email</span>
+                <input
+                  type="email"
+                  [(ngModel)]="userDetails.email"
+                  name="email"
+                  placeholder="Enter email address"
+                />
+              </label>
+            </div>
+
+            <div class="form-group">
+              <label>
+                <span>Phone</span>
+                <input
+                  type="tel"
+                  [(ngModel)]="userDetails.phone"
+                  name="phone"
+                  placeholder="Enter phone number"
+                />
+              </label>
+            </div>
+
+            <button type="submit" class="save-button">Save Changes</button>
+          </form>
+        </div>
+
+        <!-- Auth Configuration Tab -->
+        <div *ngIf="activeTab === 'auth-config'" class="tab-pane active">
+          <form (ngSubmit)="saveAuthConfig()" class="settings-form">
+            <div class="form-group checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" [(ngModel)]="authConfig.enableMFA" name="enableMFA" />
+                <span class="checkbox-text">Enable Multi-Factor Authentication</span>
+              </label>
+              <p class="checkbox-description">Add an extra layer of security to your account</p>
+            </div>
+
+            <div class="form-group checkbox-group">
+              <label class="checkbox-label">
+                <input
+                  type="checkbox"
+                  [(ngModel)]="authConfig.enableBiometric"
+                  name="enableBiometric"
+                />
+                <span class="checkbox-text">Enable Biometric Login</span>
+              </label>
+              <p class="checkbox-description">Use fingerprint or face recognition</p>
+            </div>
+
+            <div class="form-group">
+              <label>
+                <span>Session Timeout (minutes)</span>
+                <input
+                  type="number"
+                  [(ngModel)]="authConfig.sessionTimeout"
+                  name="sessionTimeout"
+                  min="5"
+                  max="480"
+                />
+              </label>
+            </div>
+
+            <div class="form-group">
+              <label>
+                <span>Password Expiry (days)</span>
+                <input
+                  type="number"
+                  [(ngModel)]="authConfig.passwordExpiry"
+                  name="passwordExpiry"
+                  min="7"
+                  max="365"
+                />
+              </label>
+            </div>
+
+            <button type="submit" class="save-button">Save Configuration</button>
+          </form>
+        </div>
+
+        <!-- PIN Setup Tab -->
+        <div *ngIf="activeTab === 'pin-setup'" class="tab-pane active">
+          <div class="pin-section">
+            <h3>Device PIN Protection</h3>
+            <p class="section-description">
+              Set a PIN to encrypt and protect your TOTP secrets stored locally on this device.
+            </p>
+
+            <div *ngIf="pinError" class="error-banner">
+              {{ pinError }}
+            </div>
+
+            <div *ngIf="pinSuccess" class="success-banner">
+              {{ pinSuccess }}
+            </div>
+
+            <form (ngSubmit)="setupPin()" class="settings-form">
+              <div *ngIf="pinSetup.isSet" class="form-group">
+                <label>
+                  <span>Current PIN</span>
+                  <input
+                    type="password"
+                    [(ngModel)]="pinSetup.currentPin"
+                    name="currentPin"
+                    placeholder="Enter your current PIN"
+                    required
+                  />
+                </label>
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <span>{{ pinSetup.isSet ? 'New' : '' }} PIN</span>
+                  <input
+                    type="password"
+                    [(ngModel)]="pinSetup.newPin"
+                    name="newPin"
+                    placeholder="Enter at least 4 digits"
+                    required
+                  />
+                </label>
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <span>Confirm PIN</span>
+                  <input
+                    type="password"
+                    [(ngModel)]="pinSetup.confirmPin"
+                    name="confirmPin"
+                    placeholder="Confirm your PIN"
+                    required
+                  />
+                </label>
+              </div>
+
+              <button type="submit" class="save-button" [disabled]="pinLoading">
+                {{ pinLoading ? 'Setting PIN...' : pinSetup.isSet ? 'Update PIN' : 'Set PIN' }}
+              </button>
+            </form>
+
+            <div class="pin-info">
+              <h4>📝 Remember:</h4>
+              <ul>
+                <li>Your PIN encrypts all TOTP secrets stored locally</li>
+                <li>You'll need this PIN to unlock and view your codes</li>
+                <li>If you forget your PIN, you'll need to re-add your TOTP accounts</li>
+                <li>This PIN is only for this device and browser</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- TOTP Accounts Tab -->
+        <div *ngIf="activeTab === 'totp-accounts'" class="tab-pane active">
+          <div class="totp-section">
+            <h3>Offline TOTP Authenticator</h3>
+            <p class="section-description">
+              Manage your offline Time-based One-Time Password (TOTP) accounts for 2FA without
+              internet.
+            </p>
+
+            <div class="totp-actions">
+              <button class="btn-secondary" (click)="addTOTPAccount()">➕ Add New Account</button>
+              <button class="btn-secondary" (click)="viewTOTPAccounts()">
+                📋 View All Accounts
+              </button>
+            </div>
+
+            <div class="totp-info">
+              <h4>🔐 How it works:</h4>
+              <ul>
+                <li>Scan QR codes from Microsoft Authenticator, Authy, or Google Authenticator</li>
+                <li>Secrets are encrypted with your PIN and stored locally</li>
+                <li>Generate 6-digit codes offline, anytime</li>
+                <li>Each code is valid for 30 seconds</li>
+                <li>Backup codes are provided for account recovery</li>
+              </ul>
+            </div>
+
+            <div class="totp-warning">
+              <h4>⚠️ Important:</h4>
+              <ul>
+                <li>Set a PIN before adding TOTP accounts</li>
+                <li>Back up your recovery codes in a safe place</li>
+                <li>This is for offline use only - test with online services first</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

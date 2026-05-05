@@ -1,0 +1,80 @@
+<div class="totp-shell">
+  <div class="totp-container">
+    <div class="totp-header">
+      <div>
+        <h1>TOTP Authenticator</h1>
+        <p>Your offline 2FA codes</p>
+      </div>
+      <button class="btn-add" (click)="addNewAccount()" title="Add new account">
+        ➕ Add Account
+      </button>
+    </div>
+
+    <div *ngIf="error" class="error-banner">
+      {{ error }}
+    </div>
+
+    <div class="search-box">
+      <input
+        type="text"
+        placeholder="Search by account or issuer..."
+        [(ngModel)]="searchQuery"
+        class="search-input"
+      />
+    </div>
+
+    <div *ngIf="loading" class="loading">
+      <div class="spinner"></div>
+      <p>Loading your accounts...</p>
+    </div>
+
+    <div *ngIf="!loading && getFilteredSecrets().length === 0" class="empty-state">
+      <p class="empty-icon">📱</p>
+      <p class="empty-text">No TOTP accounts found</p>
+      <button class="btn-primary" (click)="addNewAccount()">Add Your First Account</button>
+    </div>
+
+    <div class="totp-grid">
+      <div *ngFor="let secret of getFilteredSecrets()" class="totp-card">
+        <div class="card-header">
+          <div class="account-info">
+            <h3>{{ secret.account }}</h3>
+            <p class="issuer">{{ secret.issuer }}</p>
+          </div>
+          <button class="btn-delete" (click)="deleteSecret(secret.id)" title="Delete">🗑️</button>
+        </div>
+
+        <div *ngIf="totpCodes.has(secret.id)" class="code-section">
+          <div class="code-display">
+            <span class="code-text" (click)="copyCode(secret.id, totpCodes.get(secret.id)!.code)">
+              {{ totpCodes.get(secret.id)!.code }}
+            </span>
+          </div>
+
+          <div class="timer-section">
+            <div class="timer-progress">
+              <div
+                class="progress-bar"
+                [style.width.%]="getTimerProgress(totpCodes.get(secret.id)!.remainingSeconds)"
+              ></div>
+            </div>
+            <span class="timer-text">{{ totpCodes.get(secret.id)!.remainingSeconds }}s</span>
+          </div>
+
+          <div class="card-footer">
+            <button
+              class="btn-copy"
+              (click)="copyCode(secret.id, totpCodes.get(secret.id)!.code)"
+              [class.copied]="copiedCode === secret.id"
+            >
+              {{ copiedCode === secret.id ? '✓ Copied!' : '📋 Copy' }}
+            </button>
+            <p class="last-used" *ngIf="secret.lastUsed">
+              Last used: {{ secret.lastUsed | date: 'short' }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
