@@ -1,8 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { QRDecoderService } from '../../services/qr-decoder.service';
 import { DexieService } from '../../services/dexie.service';
 import { TOTPGeneratorService } from '../../services/totp-generator.service';
 
@@ -12,23 +11,31 @@ import { TOTPGeneratorService } from '../../services/totp-generator.service';
   imports: [CommonModule, FormsModule],
   templateUrl: './setup-totp.html',
   styleUrl: './setup-totp.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SetupTotpComponent implements OnInit {
-  public step: 'method' | 'manual' | 'confirmation' = 'method';
-  public scanMethod: 'qr' | 'manual' | null = null;
+  public step: 'details' | 'provision' = 'details';
   public loading = false;
   public error: string | null = null;
+  public success: string | null = null;
 
-  public manualSecret = '';
-  public manualAccount = '';
-  public manualIssuer = '';
+  public readonly defaultAccountLabel = 'offline-user';
+  public readonly defaultIssuerLabel = 'OfflineAuth';
+  public verificationCode = '';
 
-  public totpData: any = null;
-  public previewCode = '';
+  public totpData: {
+    secret: string;
+    account: string;
+    issuer: string;
+    period: number;
+    digits: number;
+    algorithm: string;
+    otpauthUri: string;
+  } | null = null;
+  public qrCodeDataUrl = '';
   public backupCodes: string[] = [];
 
   constructor(
-    private qrDecoder: QRDecoderService,
     private dexieService: DexieService,
     private totpGenerator: TOTPGeneratorService,
     private router: Router,
@@ -39,75 +46,42 @@ export class SetupTotpComponent implements OnInit {
   }
 
   /**
-   * Handle QR code file upload
+   * Prepare a new provisioning QR for the single offline account
    */
-  async onQRFileSelected(event: Event): Promise<void> {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-
-    if (!file) return;
-
+  async generateProvisioningQr(): Promise<void> {
     this.loading = true;
     this.error = null;
+    this.success = null;
 
     try {
-      // For now, show manual entry instead (QR decoding requires additional library)
-      this.error = 'QR scanning requires camera/library integration. Use manual entry instead.';
-      this.scanMethod = 'manual';
-      this.step = 'manual';
+      const secret = this.totpGenerator.generateSecret();
+      const account = this.defaultAccountLabel;
+      const issuer = this.defaultIssuerLabel;
+      const otpauthUri = this.totpGenerator.buildOtpAuthUri({
+        secret,
+        account,
+        issuer,
+        digits: 6,
+        period: 30,
+        algorithm: 'SHA1',
+      });
+
+      this.totpData = {
+        secret,
+        account,
+        issuer,
+        period: 30,
+        digits: 6,
+        algorithm: 'SHA1',
+        otpauthUri,
+      };
+      this.qrCodeDataUrl = await this.totpGenerator.generateQRCodeDataUrl(otpauthUri);
+      this.verificationCode = '';
+      this.step = 'provision';
     } catch (err) {
-      this.error = `Failed to decode QR: ${err}`;
+      this.error = `Failed to generate provisioning QR: ${err}`;
     } finally {
       this.loading = false;
-    }
-  }
-
-  /**
-   * Start manual entry flow
-   */
-  startManualEntry(): void {
-    this.scanMethod = 'manual';
-    this.step = 'manual';
-    this.error = null;
-  }
-
-  /**
-   * Validate and proceed with manual secret
-   */
-  async proceedWithManual(): Promise<void> {
-    const sanitizedSecret = this.qrDecoder.sanitizeBase32Secret(this.manualSecret);
-
-    if (!this.qrDecoder.isValidBase32Secret(sanitizedSecret)) {
-      this.error = 'Invalid Base32 secret format';
-      return;
-    }
-
-    if (!this.manualAccount.trim()) {
-      this.error = 'Account name is required';
-      return;
-    }
-
-    if (!this.manualIssuer.trim()) {
-      this.error = 'Issuer name is required';
-      return;
-    }
-
-    this.totpData = {
-      secret: sanitizedSecret,
-      account: this.manualAccount.trim(),
-      issuer: this.manualIssuer.trim(),
-      period: 30,
-      digits: 6,
-      algorithm: 'SHA1',
-    };
-
-    // Generate preview code
-    try {
-      this.previewCode = this.totpGenerator.generateTOTP(this.totpData.secret);
-      this.step = 'confirmation';
-      this.error = null;
-    } catch (err) {
-      this.error = `Failed to generate TOTP: ${err}`;
     }
   }
 
@@ -115,26 +89,44 @@ export class SetupTotpComponent implements OnInit {
    * Cancel and go back
    */
   cancel(): void {
-    if (this.step === 'confirmation') {
-      this.step = 'manual';
-    } else if (this.step === 'manual') {
-      this.step = 'method';
+    if (this.step === 'provision') {
+      this.step = 'details';
+      this.error = null;
     } else {
       this.router.navigate(['/settings']);
     }
   }
 
   /**
-   * Save TOTP secret
+   * Verify the authenticator code and save the single local TOTP secret
    */
-  async saveTOTPSecret(): Promise<void> {
+  async verifyAndSave(): Promise<void> {
     if (!this.totpData) return;
+
+    if (!/^\d{6}$/.test(this.verificationCode.trim())) {
+      this.error = 'Enter the 6-digit code currently shown in your authenticator app';
+      return;
+    }
+
+    const isValid = await this.totpGenerator.validateTOTP(
+      this.totpData.secret,
+      this.verificationCode.trim(),
+      this.totpData.digits,
+      1,
+      this.totpData.period,
+    );
+
+    if (!isValid) {
+      this.error = 'The code did not match this QR setup. Scan again and try a fresh code.';
+      return;
+    }
 
     this.loading = true;
     this.error = null;
+    this.success = null;
 
     try {
-      await this.dexieService.addTOTPSecret({
+      await this.dexieService.saveSingleTOTPSecret({
         account: this.totpData.account,
         issuer: this.totpData.issuer,
         secret: this.totpData.secret,
@@ -146,7 +138,7 @@ export class SetupTotpComponent implements OnInit {
         backupCodes: this.backupCodes,
       });
 
-      // Navigate to settings
+      this.success = 'Authenticator linked successfully. This device now has one offline TOTP account.';
       this.router.navigate(['/settings']);
     } catch (err) {
       this.error = `Failed to save TOTP: ${err}`;

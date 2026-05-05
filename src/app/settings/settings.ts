@@ -120,6 +120,7 @@ export class SettingsComponent implements OnInit {
         pinHash: pinHash,
         pinSalt: this.bufferToBase64(salt),
         encryptionKeyDerived: true,
+        lastUnlockedAt: new Date(),
         sessionTimeout: 30,
       });
 

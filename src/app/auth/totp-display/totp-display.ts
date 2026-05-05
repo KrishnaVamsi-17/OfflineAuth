@@ -50,7 +50,7 @@ export class TOTPDisplayComponent implements OnInit, OnDestroy {
 
     try {
       this.secrets = await this.dexieService.getAllTOTPSecrets();
-      this.generateAllCodes();
+      await this.generateAllCodes();
     } catch (err) {
       this.error = `Failed to load TOTP secrets: ${err}`;
       console.error(err);
@@ -62,19 +62,33 @@ export class TOTPDisplayComponent implements OnInit, OnDestroy {
   /**
    * Generate TOTP codes for all secrets
    */
-  generateAllCodes(): void {
-    this.secrets.forEach((secret) => {
-      try {
-        const { code, remainingSeconds } = this.totpGenerator.getTOTPWithTimer(
-          secret.secret,
-          secret.digits,
-          secret.period,
-        );
-        this.totpCodes.set(secret.id, { code, remainingSeconds });
-      } catch (err) {
-        console.error(`Failed to generate code for ${secret.account}:`, err);
+  async generateAllCodes(): Promise<void> {
+    const entries = await Promise.all(
+      this.secrets.map(async (secret) => {
+        try {
+          const { code, remainingSeconds } = await this.totpGenerator.getResolvedTOTPWithTimer(
+            secret.secret,
+            secret.digits,
+            secret.period,
+            secret.algorithm as 'SHA1' | 'SHA256' | 'SHA512',
+          );
+
+          return [secret.id, { code, remainingSeconds }] as const;
+        } catch (err) {
+          console.error(`Failed to generate code for ${secret.account}:`, err);
+          return null;
+        }
+      }),
+    );
+
+    const nextCodes = new Map<string, { code: string; remainingSeconds: number }>();
+    entries.forEach((entry) => {
+      if (entry) {
+        nextCodes.set(entry[0], entry[1]);
       }
     });
+
+    this.totpCodes = nextCodes;
   }
 
   /**
@@ -84,7 +98,7 @@ export class TOTPDisplayComponent implements OnInit, OnDestroy {
     interval(1000)
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
-        this.generateAllCodes();
+        void this.generateAllCodes();
       });
   }
 

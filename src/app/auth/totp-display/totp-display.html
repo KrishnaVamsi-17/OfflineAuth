@@ -2,11 +2,11 @@
   <div class="totp-container">
     <div class="totp-header">
       <div>
-        <h1>TOTP Authenticator</h1>
-        <p>Your offline 2FA codes</p>
+        <h1>Current TOTP Setup</h1>
+        <p>The single offline authenticator secret stored on this device</p>
       </div>
-      <button class="btn-add" (click)="addNewAccount()" title="Add new account">
-        ➕ Add Account
+      <button class="btn-add" (click)="addNewAccount()" title="Replace current setup">
+        🔄 Replace Setup
       </button>
     </div>
 
@@ -17,7 +17,7 @@
     <div class="search-box">
       <input
         type="text"
-        placeholder="Search by account or issuer..."
+        placeholder="Filter by account or issuer..."
         [(ngModel)]="searchQuery"
         class="search-input"
       />
@@ -25,13 +25,13 @@
 
     <div *ngIf="loading" class="loading">
       <div class="spinner"></div>
-      <p>Loading your accounts...</p>
+      <p>Loading your TOTP setup...</p>
     </div>
 
     <div *ngIf="!loading && getFilteredSecrets().length === 0" class="empty-state">
       <p class="empty-icon">📱</p>
-      <p class="empty-text">No TOTP accounts found</p>
-      <button class="btn-primary" (click)="addNewAccount()">Add Your First Account</button>
+      <p class="empty-text">No TOTP setup found on this device</p>
+      <button class="btn-primary" (click)="addNewAccount()">Set Up Authenticator</button>
     </div>
 
     <div class="totp-grid">

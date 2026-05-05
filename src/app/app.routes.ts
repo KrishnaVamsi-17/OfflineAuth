@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { AuthComponent } from './auth/auth';
+import { DashboardComponent } from './dashboard/dashboard';
 import { SettingsComponent } from './settings/settings';
 import { SetupTotpComponent } from './auth/setup-totp/setup-totp';
 import { TOTPDisplayComponent } from './auth/totp-display/totp-display';
@@ -7,6 +8,7 @@ import { TOTPDisplayComponent } from './auth/totp-display/totp-display';
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
   { path: 'login', component: AuthComponent },
+  { path: 'dashboard', component: DashboardComponent },
   { path: 'settings', component: SettingsComponent },
   {
     path: 'auth',
@@ -15,4 +17,5 @@ export const routes: Routes = [
       { path: 'totp-display', component: TOTPDisplayComponent },
     ],
   },
+  { path: '**', redirectTo: 'login' },
 ];

@@ -155,9 +155,9 @@
         <!-- PIN Setup Tab -->
         <div *ngIf="activeTab === 'pin-setup'" class="tab-pane active">
           <div class="pin-section">
-            <h3>Device PIN Protection</h3>
+            <h3>Device PIN Fallback</h3>
             <p class="section-description">
-              Set a PIN to encrypt and protect your TOTP secrets stored locally on this device.
+              Set a local PIN as an offline fallback login method when TOTP is not configured.
             </p>
 
             <div *ngIf="pinError" class="error-banner">
@@ -216,9 +216,9 @@
             <div class="pin-info">
               <h4>📝 Remember:</h4>
               <ul>
-                <li>Your PIN encrypts all TOTP secrets stored locally</li>
-                <li>You'll need this PIN to unlock and view your codes</li>
-                <li>If you forget your PIN, you'll need to re-add your TOTP accounts</li>
+                <li>Offline login prefers TOTP when TOTP is configured</li>
+                <li>If TOTP is not configured, this PIN can be used for offline sign-in</li>
+                <li>If you forget your PIN, reset it while online</li>
                 <li>This PIN is only for this device and browser</li>
               </ul>
             </div>
@@ -228,36 +228,38 @@
         <!-- TOTP Accounts Tab -->
         <div *ngIf="activeTab === 'totp-accounts'" class="tab-pane active">
           <div class="totp-section">
-            <h3>Offline TOTP Authenticator</h3>
+            <h3>Offline TOTP Verification</h3>
             <p class="section-description">
-              Manage your offline Time-based One-Time Password (TOTP) accounts for 2FA without
-              internet.
+              Provision the single authenticator account used by this device to verify offline login
+              codes.
             </p>
 
             <div class="totp-actions">
-              <button class="btn-secondary" (click)="addTOTPAccount()">➕ Add New Account</button>
+              <button class="btn-secondary" (click)="addTOTPAccount()">
+                📷 Set Up Authenticator
+              </button>
               <button class="btn-secondary" (click)="viewTOTPAccounts()">
-                📋 View All Accounts
+                🔎 View Current Setup
               </button>
             </div>
 
             <div class="totp-info">
               <h4>🔐 How it works:</h4>
               <ul>
-                <li>Scan QR codes from Microsoft Authenticator, Authy, or Google Authenticator</li>
-                <li>Secrets are encrypted with your PIN and stored locally</li>
-                <li>Generate 6-digit codes offline, anytime</li>
-                <li>Each code is valid for 30 seconds</li>
-                <li>Backup codes are provided for account recovery</li>
+                <li>When online, you generate a QR code here and scan it with your authenticator app</li>
+                <li>The shared secret is stored locally on this device for offline verification</li>
+                <li>When offline, users sign in with TOTP or fallback to PIN if TOTP is not set up</li>
+                <li>Only one active TOTP setup is kept on this device at a time</li>
+                <li>Backup codes are still generated for recovery scenarios</li>
               </ul>
             </div>
 
             <div class="totp-warning">
               <h4>⚠️ Important:</h4>
               <ul>
-                <li>Set a PIN before adding TOTP accounts</li>
+                <li>The current flow does not require a PIN before provisioning the authenticator secret</li>
                 <li>Back up your recovery codes in a safe place</li>
-                <li>This is for offline use only - test with online services first</li>
+                <li>Re-running setup replaces the previously stored TOTP secret on this device</li>
               </ul>
             </div>
           </div>

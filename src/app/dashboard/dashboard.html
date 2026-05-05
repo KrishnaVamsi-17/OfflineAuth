@@ -1,0 +1,37 @@
+<div class="dashboard-shell">
+  <section class="dashboard-card">
+    <div class="dashboard-header">
+      <div>
+        <h1>Dashboard</h1>
+        <p>You are inside the local application shell after authentication.</p>
+      </div>
+      <div class="session-pill" [class.online]="isOnline()">
+        {{ sessionLabel() }}
+      </div>
+    </div>
+
+    <div class="dashboard-panels">
+      <article class="panel primary">
+        <h2>Current Mode</h2>
+        <p>
+          @if (isOnline()) {
+            Network is available. You can manage device settings or refresh the offline TOTP setup.
+          } @else {
+            Network is unavailable. This dashboard is being served from the local app shell and the
+            TOTP challenge was verified on-device.
+          }
+        </p>
+      </article>
+
+      <article class="panel">
+        <h2>Next Steps</h2>
+        <p>Use Settings to update the TOTP enrollment or extend the authenticated device flow.</p>
+      </article>
+    </div>
+
+    <div class="dashboard-actions">
+      <button type="button" class="primary-button" (click)="goToSettings()">Open Settings</button>
+      <button type="button" class="secondary-button" (click)="logout()">Return To Login</button>
+    </div>
+  </section>
+</div>

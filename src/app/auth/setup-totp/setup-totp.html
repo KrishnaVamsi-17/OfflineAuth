@@ -1,77 +1,47 @@
 <div class="setup-shell">
   <div class="setup-card">
     <div class="setup-header">
-      <h2>Setup Offline TOTP</h2>
-      <p>Add a new authentication account</p>
+      <h2>Set Up Offline TOTP</h2>
+      <p>Generate one QR code for your authenticator app, then verify the setup on this device.</p>
     </div>
 
-    <!-- Error Message -->
     <div *ngIf="error" class="error-banner">
       {{ error }}
     </div>
 
-    <!-- Method Selection -->
-    <div *ngIf="step === 'method'" class="setup-step">
-      <div class="method-options">
-        <button class="method-button" (click)="startManualEntry()" [disabled]="loading">
-          <span class="method-icon">✎</span>
-          <span class="method-label">Manual Entry</span>
-          <span class="method-desc">Enter secret manually</span>
-        </button>
-      </div>
+    <div *ngIf="success" class="success-banner">
+      {{ success }}
     </div>
 
-    <!-- Manual Entry -->
-    <div *ngIf="step === 'manual'" class="setup-step">
-      <form (ngSubmit)="proceedWithManual()" class="setup-form">
-        <label>
-          <span>Base32 Secret</span>
-          <input
-            type="text"
-            [(ngModel)]="manualSecret"
-            name="secret"
-            placeholder="e.g., JBSWY3DPEBLW64TMMQ======"
-            required
-          />
-        </label>
-
-        <label>
-          <span>Account Name</span>
-          <input
-            type="text"
-            [(ngModel)]="manualAccount"
-            name="account"
-            placeholder="e.g., user@example.com"
-            required
-          />
-        </label>
-
-        <label>
-          <span>Issuer (App Name)</span>
-          <input
-            type="text"
-            [(ngModel)]="manualIssuer"
-            name="issuer"
-            placeholder="e.g., OfflineAuth"
-            required
-          />
-        </label>
+    <div *ngIf="step === 'details'" class="setup-step">
+      <form (ngSubmit)="generateProvisioningQr()" class="setup-form">
+        <div class="setup-note">
+          <h3>How this works</h3>
+          <p>
+            This screen creates the one TOTP secret used by this browser for offline login
+            verification. Scan the generated QR using Microsoft Authenticator, Google
+            Authenticator, or Authy.
+          </p>
+          <p>
+            For now the QR uses default account metadata. Later this can be replaced with the
+            signed-in user's email from Microsoft SSO.
+          </p>
+        </div>
 
         <div class="form-actions">
           <button type="button" class="btn-secondary" (click)="cancel()" [disabled]="loading">
             Cancel
           </button>
           <button type="submit" class="btn-primary" [disabled]="loading">
-            {{ loading ? 'Processing...' : 'Next' }}
+            {{ loading ? 'Generating...' : 'Generate QR Code' }}
           </button>
         </div>
       </form>
     </div>
 
-    <!-- Confirmation -->
-    <div *ngIf="step === 'confirmation'" class="setup-step">
+    <div *ngIf="step === 'provision' && totpData" class="setup-step">
       <div class="confirmation-section">
-        <h3>Verify Your Account</h3>
+        <h3>Scan And Verify</h3>
 
         <div class="account-details">
           <div class="detail-row">
@@ -84,10 +54,18 @@
           </div>
         </div>
 
-        <div class="code-preview">
-          <h4>Preview TOTP Code</h4>
-          <div class="code-display">{{ previewCode }}</div>
-          <p class="code-hint">This code changes every 30 seconds</p>
+        <div class="qr-section">
+          <img class="qr-image" [src]="qrCodeDataUrl" alt="Authenticator provisioning QR code" />
+          <p class="qr-hint">
+            Scan this QR using your authenticator app. If scanning is unavailable, enter the
+            secret below manually.
+          </p>
+        </div>
+
+        <div class="manual-secret">
+          <h4>Manual fallback secret</h4>
+          <div class="secret-display">{{ totpData.secret }}</div>
+          <p class="code-hint">Use only if your authenticator app cannot scan the QR.</p>
         </div>
 
         <div class="backup-codes-section">
@@ -102,14 +80,36 @@
           <button type="button" class="btn-copy" (click)="copyBackupCodes()">📋 Copy Codes</button>
         </div>
 
-        <div class="form-actions">
-          <button type="button" class="btn-secondary" (click)="cancel()" [disabled]="loading">
-            Back
-          </button>
-          <button type="button" class="btn-primary" (click)="saveTOTPSecret()" [disabled]="loading">
-            {{ loading ? 'Saving...' : 'Save & Complete' }}
-          </button>
-        </div>
+        <form (ngSubmit)="verifyAndSave()" class="setup-form verify-form">
+          <label>
+            <span>Authenticator Code</span>
+            <input
+              type="text"
+              [(ngModel)]="verificationCode"
+              name="verificationCode"
+              inputmode="numeric"
+              maxlength="6"
+              placeholder="Enter the current 6-digit code"
+              required
+            />
+          </label>
+
+          <div class="setup-note compact">
+            <p>
+              Enter the code currently shown in your authenticator app to confirm that this QR was
+              scanned correctly before saving it for offline login.
+            </p>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn-secondary" (click)="cancel()" [disabled]="loading">
+              Back
+            </button>
+            <button type="submit" class="btn-primary" [disabled]="loading">
+              {{ loading ? 'Saving...' : 'Verify & Save' }}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>

@@ -3,32 +3,22 @@ import { db } from './db/offline-db';
 import { TOTPSecret } from './db/models/totp-secret.model';
 import { OTPHistory } from './db/models/otp-history.model';
 import { UserSettings } from './db/models/user-settings.model';
-import { EncryptionService } from './encryption.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class DexieService {
-  constructor(private encryptionService: EncryptionService) {}
-
   // ==================== TOTP Secrets ====================
 
   /**
-   * Add new TOTP secret (encrypted)
+   * Add new TOTP secret
    */
   async addTOTPSecret(payload: Omit<TOTPSecret, 'id'>): Promise<string> {
     const id = this.generateId();
-    const encryptedSecret = await this.encryptionService.encrypt(payload.secret);
-
-    const encryptedBackupCodes = payload.backupCodes
-      ? await Promise.all(payload.backupCodes.map((code) => this.encryptionService.encrypt(code)))
-      : [];
 
     const secret: TOTPSecret = {
       ...payload,
       id,
-      secret: encryptedSecret,
-      backupCodes: encryptedBackupCodes,
       active: true,
     };
 
@@ -37,66 +27,37 @@ export class DexieService {
   }
 
   /**
-   * Get TOTP secret by ID (decrypted)
+   * Replace any existing TOTP configuration with a single active secret
+   */
+  async saveSingleTOTPSecret(payload: Omit<TOTPSecret, 'id'>): Promise<string> {
+    await db.transaction('rw', db.totpSecrets, db.otpHistory, async () => {
+      await db.totpSecrets.clear();
+      await db.otpHistory.clear();
+    });
+
+    return this.addTOTPSecret(payload);
+  }
+
+  /**
+   * Get TOTP secret by ID
    */
   async getTOTPSecret(id: string): Promise<TOTPSecret | null> {
-    const secret = await db.totpSecrets.get(id);
-
-    if (!secret) {
-      return null;
-    }
-
-    try {
-      const decryptedSecret = await this.encryptionService.decrypt(secret.secret);
-
-      const decryptedBackupCodes = secret.backupCodes
-        ? await Promise.all(secret.backupCodes.map((code) => this.encryptionService.decrypt(code)))
-        : [];
-
-      return {
-        ...secret,
-        secret: decryptedSecret,
-        backupCodes: decryptedBackupCodes,
-      };
-    } catch (error) {
-      console.error('Failed to decrypt secret:', error);
-      throw new Error('Failed to decrypt secret - Invalid PIN or corrupted data');
-    }
+    return (await db.totpSecrets.get(id)) || null;
   }
 
   /**
    * Get all TOTP secrets (decrypted)
    */
   async getAllTOTPSecrets(): Promise<TOTPSecret[]> {
-    const secrets = await db.totpSecrets
-      .where('active')
-      .equals(true as any)
-      .toArray();
-
-    const decryptedSecrets = await Promise.all(
-      secrets.map((secret) => this.getTOTPSecret(secret.id)),
-    );
-
-    return decryptedSecrets.filter((s): s is TOTPSecret => s !== null);
+    const secrets = await db.totpSecrets.toArray();
+    return secrets.filter((secret) => secret.active !== false);
   }
 
   /**
    * Update TOTP secret
    */
   async updateTOTPSecret(id: string, updates: Partial<TOTPSecret>): Promise<void> {
-    const encryptedUpdates: any = { ...updates };
-
-    if (updates.secret) {
-      encryptedUpdates.secret = await this.encryptionService.encrypt(updates.secret);
-    }
-
-    if (updates.backupCodes) {
-      encryptedUpdates.backupCodes = await Promise.all(
-        updates.backupCodes.map((code) => this.encryptionService.encrypt(code)),
-      );
-    }
-
-    await db.totpSecrets.update(id, encryptedUpdates);
+    await db.totpSecrets.update(id, updates);
   }
 
   /**
@@ -231,7 +192,6 @@ export class DexieService {
   async clearAll(): Promise<void> {
     await db.totpSecrets.clear();
     await db.otpHistory.clear();
-    this.encryptionService.clearKey();
   }
 
   /**
