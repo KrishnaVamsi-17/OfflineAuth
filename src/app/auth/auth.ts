@@ -7,6 +7,8 @@ import { DexieService } from '../services/dexie.service';
 import { EncryptionService } from '../services/encryption.service';
 import { SessionService } from '../services/session.service';
 import { TOTPGeneratorService } from '../services/totp-generator.service';
+import { MicrosoftAuthService } from '../services/microsoft-auth.service';
+import { TokenExchangeService } from '../services/token-exchange.service';
 import { TOTPSecret } from '../services/db/models/totp-secret.model';
 
 @Component({
@@ -23,6 +25,8 @@ export class AuthComponent {
   private readonly router = inject(Router);
   private readonly sessionService = inject(SessionService);
   private readonly totpGenerator = inject(TOTPGeneratorService);
+  private readonly microsoftAuth = inject(MicrosoftAuthService);
+  private readonly tokenExchange = inject(TokenExchangeService);
 
   public offlineCode = '';
   public offlinePin = '';
@@ -38,6 +42,7 @@ export class AuthComponent {
   public readonly offlineMethodLabel = computed(() =>
     this.hasOfflineEnrollment() ? 'TOTP' : this.hasPinFallback() ? 'PIN' : 'Not configured',
   );
+  public readonly isMicrosoftLoggingIn = signal(false);
 
   constructor() {
     effect(() => {
@@ -79,6 +84,79 @@ export class AuthComponent {
       this.hasPinFallback.set(false);
       this.pinHash.set(null);
       this.enrolledAccount.set(null);
+    }
+  }
+
+  /**
+   * Initiate Microsoft login flow
+   */
+  public async loginWithMicrosoft(): Promise<void> {
+    this.isMicrosoftLoggingIn.set(true);
+    this.error.set(null);
+
+    try {
+      // Initiate MSAL login with popup
+      this.microsoftAuth.login();
+
+      // The success will be handled through MSAL's auth state
+      // After user authenticates, the auth code will be exchanged with the backend
+    } catch (error) {
+      this.error.set(`Microsoft login failed: ${error}`);
+      this.isMicrosoftLoggingIn.set(false);
+    }
+  }
+
+  /**
+   * Login with Microsoft redirect (fallback if popup is blocked)
+   */
+  public loginWithMicrosoftRedirect(): void {
+    try {
+      this.microsoftAuth.loginWithRedirect();
+    } catch (error) {
+      this.error.set(`Microsoft login redirect failed: ${error}`);
+    }
+  }
+
+  /**
+   * Exchange auth code with backend for access token
+   * This should be called after successful Microsoft authentication
+   */
+  public async exchangeAuthCodeForToken(authCode: string): Promise<void> {
+    this.loading.set(true);
+    this.error.set(null);
+
+    try {
+      // Generate PKCE values for enhanced security
+      const { codeVerifier } = await this.tokenExchange.generatePKCE();
+
+      // Exchange code with backend
+      this.tokenExchange.exchangeAuthCode(authCode, codeVerifier).subscribe({
+        next: (response) => {
+          // Store the token
+          this.tokenExchange.storeToken(response.accessToken);
+          this.microsoftAuth.setToken(response.accessToken);
+
+          // Update user info
+          if (response.user) {
+            sessionStorage.setItem('user', JSON.stringify(response.user));
+          }
+
+          this.loading.set(false);
+          this.isMicrosoftLoggingIn.set(false);
+
+          // Navigate to dashboard after successful authentication
+          this.router.navigate(['/dashboard']);
+        },
+        error: (err) => {
+          this.loading.set(false);
+          this.isMicrosoftLoggingIn.set(false);
+          this.error.set(`Token exchange failed: ${err.error?.message || 'Unknown error'}`);
+        },
+      });
+    } catch (error) {
+      this.loading.set(false);
+      this.isMicrosoftLoggingIn.set(false);
+      this.error.set(`Auth code exchange failed: ${error}`);
     }
   }
 

@@ -178,3 +178,72 @@ input:disabled {
   height: 1px;
   background: #e5e7eb;
 }
+
+/**
+ * Microsoft Login Button Styles
+ */
+.microsoft-login-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.microsoft-button {
+  width: 100%;
+  padding: 0.95rem 1rem;
+  border-radius: 0.85rem;
+  border: 1px solid #0078d4;
+  background: #0078d4;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+  box-shadow: 0 8px 20px rgba(0, 120, 212, 0.2);
+}
+
+.microsoft-button:hover:not(:disabled) {
+  background: #006da7;
+  box-shadow: 0 12px 28px rgba(0, 120, 212, 0.3);
+  transform: translateY(-2px);
+}
+
+.microsoft-button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 4px 12px rgba(0, 120, 212, 0.2);
+}
+
+.microsoft-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.fallback-text {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.fallback-button {
+  background: none;
+  border: none;
+  color: #0078d4;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  font-weight: 500;
+}
+
+.fallback-button:hover {
+  color: #006da7;
+}
+
+.fallback-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

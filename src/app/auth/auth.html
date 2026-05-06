@@ -27,11 +27,40 @@
       <div class="mode-panel">
         <h2>Online Enrollment</h2>
         <p>
-          Microsoft SSO is still a placeholder in this project. Continue to Settings to simulate
-          the online flow and enroll offline TOTP on this device.
+          Sign in with your Microsoft account, then configure offline TOTP access for this device.
         </p>
-        <button type="button" class="primary-button" (click)="continueOnline()">
-          Continue To Settings
+        
+        <div class="microsoft-login-section">
+          <button 
+            type="button" 
+            class="microsoft-button" 
+            (click)="loginWithMicrosoft()"
+            [disabled]="isMicrosoftLoggingIn() || loading()"
+          >
+            @if (isMicrosoftLoggingIn()) {
+              Connecting to Microsoft...
+            } @else {
+              Sign in with Microsoft
+            }
+          </button>
+          
+          <p class="fallback-text">
+            If the popup is blocked, you can use redirect instead:
+            <button 
+              type="button" 
+              class="fallback-button" 
+              (click)="loginWithMicrosoftRedirect()"
+              [disabled]="isMicrosoftLoggingIn() || loading()"
+            >
+              Use Redirect
+            </button>
+          </p>
+        </div>
+
+        <div class="divider">Or</div>
+
+        <button type="button" class="secondary-button" (click)="continueOnline()">
+          Continue To Settings Without Microsoft
         </button>
       </div>
     } @else {
